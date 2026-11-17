@@ -1,0 +1,5 @@
+{
+  "name": "claude-nebula",
+  "owner": { "name": "fenegroni" },
+  "plugins": [{ "name": "nebula", "source": "./" }]
+}
