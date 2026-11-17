@@ -1,7 +1,7 @@
 export type MoodName = 'idle' | 'thinking' | 'question' | 'done'
 
-/** The backdrop's state now, and the one it left, so the old glow can fade out. */
-export type Mood = { now: MoodName; was: MoodName }
+/** What Claude is doing, which picks the backdrop's glow. */
+export type Mood = { now: MoodName }
 
 declare module 'claude-code' {
   interface PluginState {

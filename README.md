@@ -1,12 +1,14 @@
 # Nebula
 
-Nebula is a dark theme for the Claude desktop and mobile apps. It replaces the flat grey of dark mode with violet-tinted surfaces and a slowly drifting nebula behind the conversation. The background also reacts to what Claude is doing:
+Nebula is a dark theme for the Claude desktop and mobile apps. It replaces the flat grey of dark mode with violet-tinted surfaces and a nebula of violet, blue and magenta clouds with stars behind the conversation. The background also changes with what Claude is doing:
 
-- **Thinking:** a soft violet glow breathes in the centre while Claude works.
-- **Question pending:** a rose glow rises from the prompt area and pulses until you answer.
-- **Turn finished:** a single lilac swell fades away over about three seconds.
+- **Thinking:** a soft violet glow fills the centre while Claude works.
+- **Question pending:** a rose glow rises from the prompt area until you answer.
+- **Turn finished:** a lilac glow shows for about four seconds.
 
-Light mode keeps the app's own look. If your system asks for reduced motion, the drifting and twinkling stop.
+Light mode keeps the app's own look.
+
+The background is still rather than animated. The desktop app currently shows a theme's background as a still picture and reloads it on every redraw, so frame-by-frame animation flickers.
 
 ## Install
 

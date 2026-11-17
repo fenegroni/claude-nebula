@@ -1,6 +1,7 @@
 {
   "name": "nebula",
-  "version": "0.1.0",
-  "description": "Violet nebula dark theme whose backdrop glows while Claude thinks, pulses when a question waits, and flashes when a turn ends.",
+  "version": "0.2.0",
+  "description": "Violet nebula dark theme whose backdrop glows violet while Claude thinks, rose when a question waits, and lilac when a turn ends.",
+  "license": "MIT",
   "types": "./types/index.d.ts"
 }
