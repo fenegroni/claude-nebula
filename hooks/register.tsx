@@ -1,7 +1,5 @@
-import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, ThemeSetArgs, Timer } from 'claude-code'
+import type { Register, ThemeSetArgs } from 'claude-code'
 
-import type { Mood, MoodName } from '../types'
 import { makeColors } from './make-colors.js'
 
 // ---------------------------------------------------------------------------
@@ -38,27 +36,12 @@ const LOOK: ThemeSetArgs = {
 }
 
 // ---------------------------------------------------------------------------
-// State: what Claude is doing, read by the backdrop drawing.
-//
-// The desktop app shows the backdrop as a still picture and reloads it on
-// every redraw, so the scene does not animate: each state gets its own still
-// glow, and the backdrop redraws only when the state changes.
+// The scene: a still nebula. The desktop app shows a backdrop as a still
+// picture and reloads it on every redraw (a brief black flash), so the scene
+// neither animates nor changes after it loads.
 // ---------------------------------------------------------------------------
 
-const mood = atom({ plugin: 'nebula', key: 'mood' } as const, { now: 'idle' } as Mood, { shape: 'mood-3' })
-
-const DONE_GLOW_MS = 4000
-let backToIdle: Timer | undefined
-
-function setMood($: EngineInterface, next: MoodName) {
-  return update($, mood, (m): Mood => (m.now === next ? m : { now: next }))
-}
-
-// ---------------------------------------------------------------------------
-// The scene
-// ---------------------------------------------------------------------------
-
-// Seeded so the stars stay put across redraws.
+// Seeded so the stars are the same every time.
 function makeStars(): string {
   let seed = 7
   const rand = () => {
@@ -75,16 +58,8 @@ function makeStars(): string {
   }
   return out
 }
-const STARS = makeStars()
 
-const GLOWS: Record<Exclude<MoodName, 'idle'>, string> = {
-  thinking: '<ellipse cx="800" cy="470" rx="760" ry="490" fill="url(#core)" opacity="0.45"/>',
-  question: '<ellipse cx="800" cy="1030" rx="1000" ry="460" fill="url(#rose)" opacity="0.65"/>',
-  done: '<ellipse cx="800" cy="500" rx="1000" ry="640" fill="url(#lilac)" opacity="0.35"/>',
-}
-
-function scene(m: Mood): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+const SCENE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
 <style>
   /* Dark only: in light mode the app keeps its own background. */
   @media (prefers-color-scheme: light) { .all { display: none; } }
@@ -98,9 +73,6 @@ function scene(m: Mood): string {
   <radialGradient id="vio"><stop offset="0" stop-color="#6b3ad6" stop-opacity="0.6"/><stop offset="1" stop-color="#6b3ad6" stop-opacity="0"/></radialGradient>
   <radialGradient id="blu"><stop offset="0" stop-color="#3550c8" stop-opacity="0.5"/><stop offset="1" stop-color="#3550c8" stop-opacity="0"/></radialGradient>
   <radialGradient id="mag"><stop offset="0" stop-color="#b23e9e" stop-opacity="0.5"/><stop offset="1" stop-color="#b23e9e" stop-opacity="0"/></radialGradient>
-  <radialGradient id="core"><stop offset="0" stop-color="#a387ff"/><stop offset="0.6" stop-color="#7a52e0" stop-opacity="0.35"/><stop offset="1" stop-color="#7a52e0" stop-opacity="0"/></radialGradient>
-  <radialGradient id="rose"><stop offset="0" stop-color="#f28aaa"/><stop offset="0.55" stop-color="#d0567f" stop-opacity="0.35"/><stop offset="1" stop-color="#d0567f" stop-opacity="0"/></radialGradient>
-  <radialGradient id="lilac"><stop offset="0" stop-color="#d8c8ff"/><stop offset="1" stop-color="#9b7cf0" stop-opacity="0"/></radialGradient>
 </defs>
 <g class="all">
   <rect width="1600" height="1000" fill="url(#base)"/>
@@ -108,11 +80,9 @@ function scene(m: Mood): string {
   <ellipse cx="1240" cy="320" rx="520" ry="380" fill="url(#blu)"/>
   <ellipse cx="1040" cy="810" rx="600" ry="320" fill="url(#mag)"/>
   <ellipse cx="270" cy="840" rx="420" ry="280" fill="url(#blu)"/>
-  ${STARS}
-  ${m.now === 'idle' ? '' : GLOWS[m.now]}
+  ${makeStars()}
 </g>
 </svg>`
-}
 
 // ---------------------------------------------------------------------------
 // Hooks
@@ -128,50 +98,16 @@ export const register: Register = on => {
     if (!set.isDrawn) {
       $.ui.status(set.reason)
     }
-    await update($, mood, (): Mood => ({ now: 'idle' }))
 
     return next(e)
   })
-
-  // Main loop only: subagents starting and finishing should not change the sky.
-  on('turn.start', async ($, e, next) => {
-    if (e.agentId === undefined) {
-      backToIdle?.cancel()
-      await setMood($, 'thinking')
-    }
-
-    return next(e)
-  })
-
-  on('turn.complete', async ($, e, next) => {
-    const result = await next(e)
-    if (e.agentId === undefined) {
-      await setMood($, 'done')
-      backToIdle?.cancel()
-      backToIdle = $.clock.after(DONE_GLOW_MS, () => {
-        void update($, mood, (m): Mood => (m.now === 'done' ? { now: 'idle' } : m))
-      })
-    }
-
-    return result
-  })
-
-  // The question dialog stays open until it is answered; the turn then goes on.
-  on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
-    await setMood($, 'question')
-    const result = await next(e)
-    await setMood($, 'thinking')
-
-    return result
-  }).catch(($, e, next) => next(e)) // A failure here must never block the question.
 
   on('ui.render', { component: 'Backdrop' }, async ($, e, next) => {
     if (e.surface !== 'desktop' && e.surface !== 'mobile') {
       return next(e)
     }
     const { Svg } = $.ui.resolve(e)
-    const m = await read($, mood)
 
-    return <Svg source={scene(m)} alt="A violet nebula behind the conversation" />
+    return <Svg source={SCENE} alt="A violet nebula behind the conversation" />
   })
 }

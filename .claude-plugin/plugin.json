@@ -1,7 +1,6 @@
 {
   "name": "nebula",
-  "version": "0.2.0",
-  "description": "Violet nebula dark theme whose backdrop glows violet while Claude thinks, rose when a question waits, and lilac when a turn ends.",
-  "license": "MIT",
-  "types": "./types/index.d.ts"
+  "version": "0.3.0",
+  "description": "Violet nebula dark theme for the Claude desktop and mobile apps: tinted surfaces over a still nebula of clouds and stars.",
+  "license": "MIT"
 }
